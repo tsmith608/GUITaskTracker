@@ -10,7 +10,7 @@ import java.util.List;
 
 public class TaskManagerApp {
     private static final String TASKS_FILE = "tasks.json"; // Path to your JSON file
-    private static List<Task> tasks = new ArrayList<>();
+    static List<Task> tasks = new ArrayList<>();
 
     public static void main(String[] args) {
         // Load tasks from the JSON file
