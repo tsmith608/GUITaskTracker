@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TaskManagerApp {
-    private static final String TASKS_FILE = "tasks.json"; // Path to your JSON file
+    public static final String TASKS_FILE = "tasks.json"; // Path to your JSON file
     static List<Task> tasks = new ArrayList<>();
 
     public static void main(String[] args) {
@@ -66,5 +66,6 @@ public class TaskManagerApp {
             System.out.println("Error reading tasks.json" + e.getMessage());
     }
 }
+
 
 }

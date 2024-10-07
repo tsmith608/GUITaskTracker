@@ -3,11 +3,15 @@ package com.taskmanager;
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.UUID;
 
 import com.formdev.flatlaf.FlatDarkLaf;
 
+import static com.taskmanager.TaskManagerApp.TASKS_FILE;
 import static com.taskmanager.TaskManagerApp.tasks;
 
 public class TaskManagerGUI extends JFrame {
@@ -70,8 +74,8 @@ public class TaskManagerGUI extends JFrame {
         bottomPanel.add(deleteButton);
 
         add(bottomPanel, BorderLayout.SOUTH);
-        revalidate();
-        repaint();
+
+
         addButton.addActionListener(e -> {
             String taskDescription = JOptionPane.showInputDialog(this, "Enter task description:");
             if (taskDescription != null && !taskDescription.trim().isEmpty()) {
@@ -83,9 +87,63 @@ public class TaskManagerGUI extends JFrame {
             }
         });
 
-    }
+        updateButton.addActionListener(e -> {
+            String taskId = JOptionPane.showInputDialog(this, "Enter task ID to update:");
+            if (taskId != null && !taskId.trim().isEmpty()) {
+                Task taskToUpdate = findTaskById(taskId);
+                if (taskToUpdate != null) {
+                    String newStatus = JOptionPane.showInputDialog(this, "Enter new task status:", taskToUpdate.getStatus());
+                    if (newStatus != null && !newStatus.trim().isEmpty()) {
+                        taskToUpdate.setStatus(newStatus);
+                        saveTasks();
+                        displayTasks(tasks);  // Refresh task display
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(this, "Task not found.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
 
-    private void saveTasks() {
+        deleteButton.addActionListener(e -> {
+            String taskId = JOptionPane.showInputDialog(this, "Enter task ID to delete:");
+            if (taskId != null && !taskId.trim().isEmpty()) {
+                Task taskToDelete = findTaskById(taskId);
+                if (taskToDelete != null) {
+                    tasks.remove(taskToDelete);
+                    saveTasks();
+                    displayTasks(tasks);  // Refresh task display
+                } else {
+                    JOptionPane.showMessageDialog(this, "Task not found.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        revalidate();
+        repaint();
+    }
+    private Task findTaskById(String id) {
+        for (Task task : tasks)
+            if (task.getId().equals(id))
+                return task;
+        return null;
+    }
+    public static void saveTasks() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(TASKS_FILE))) {
+            writer.println("[");
+            for (int i = 0; i < tasks.size(); i++) {
+                Task task = tasks.get(i);
+                String taskJson = String.format("{\"id\":\"%s\",\"description\":\"%s\",\"status\":\"%s\",\"createdAt\":\"%s\",\"updatedAt\":\"%s\"}",
+                        task.getId(), task.getDescription(), task.getStatus(), task.getCreatedAt(), task.getUpdatedAt()
+                );
+                writer.print(taskJson);
+                if (i < tasks.size() - 1) {
+                    writer.write(",");
+                }
+            }
+            writer.println("]");
+        } catch (IOException e) {
+            System.out.println("Error writing tasks.json" + e.getMessage());
+        }
     }
 
     // Method to display tasks in the text area
