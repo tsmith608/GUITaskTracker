@@ -7,26 +7,56 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class TaskManagerApp {
-    public static final String TASKS_FILE = "tasks.json"; // Path to your JSON file
     static List<Task> tasks = new ArrayList<>();
-
+    static Map<String, String> userMap;
     public static void main(String[] args) {
-        // Load tasks from the JSON file
-        loadTasks();
 
-        // Initialize the GUI on the Event Dispatch Thread for thread safety
+
+        //load user data
+        userMap = UserDataManager.loadUserMap();
+        System.out.println();
+
         SwingUtilities.invokeLater(() -> {
-            TaskManagerGUI gui = new TaskManagerGUI();
-            gui.displayTasks(tasks);
-            gui.setVisible(true);
-        });
+
+                    JFrame frame = new JFrame();
+                    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+                    //display login dialog
+                    LoginDialog loginDialog = new LoginDialog(frame, userMap);
+                    loginDialog.setVisible(true);
+
+                    //check login
+                    if (loginDialog.isSucceeded()) {
+                        //retrieve username
+                        String username = loginDialog.getLoggedInUsername();
+
+                        //load tasks for user
+                        loadTasks(username);
+
+                        // Initialize the GUI
+                        TaskManagerGUI gui = new TaskManagerGUI(username);
+                        gui.displayTasks(tasks);
+                        gui.setVisible(true);
+                    } else {
+                        System.exit(0);
+                    }
+                });
+    }
+    public static String getTasksFileName(String username) {
+        String sanitizedUsername = username.replaceAll("[^a-zA-Z0-9_-]", "_");
+        return sanitizedUsername + "_tasks.json";
     }
 
+
     // Existing loadTasks() method
-    public static void loadTasks() {
-        File file = new File(TASKS_FILE);
+    public static void loadTasks(String username) {
+        tasks.clear();
+
+        String tasksFileName = getTasksFileName(username);
+        File file = new File(tasksFileName);
 
 
         if (!file.exists()) {
@@ -35,7 +65,7 @@ public class TaskManagerApp {
         }
 
         try {
-            String content = new String(Files.readAllBytes(Paths.get(TASKS_FILE)));
+            String content = new String(Files.readAllBytes(Paths.get(tasksFileName)));
             content = content.trim();
 
             if (content.isEmpty() || content.equals("[]")) {
@@ -54,8 +84,10 @@ public class TaskManagerApp {
                 String status = attributes[2].split(":")[1];
                 String createdAt = attributes[3].split(":")[1];
                 String updatedAt = attributes[4].split(":")[1];
+                String priority = attributes[5].split(":")[1];
+                String dueDate = attributes[6].split(":")[1];
 
-                Task task = new Task(id, description, status, createdAt, updatedAt);
+                Task task = new Task(id, description, status, createdAt, updatedAt, priority, dueDate);
                 tasks.add(task);
 
                 //System.out.println("Successfully loaded task: " + description);
@@ -65,6 +97,9 @@ public class TaskManagerApp {
         } catch (IOException e) {
             System.out.println("Error reading tasks.json" + e.getMessage());
     }
+
+
+
 }
 
 
