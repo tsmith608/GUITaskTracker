@@ -1,5 +1,6 @@
 package com.taskmanager;
 
+import java.sql.SQLException;
 import java.util.*;
 import java.text.SimpleDateFormat;
 import javax.swing.*;
@@ -117,18 +118,20 @@ public class TaskManagerGUI extends JFrame {
                 if (taskDescription.isEmpty()) {
                     JOptionPane.showMessageDialog(null, "Task description cannot be empty.", "Error", JOptionPane.ERROR_MESSAGE);
                 } else {
-                    System.out.println("Number of tasks before adding new task: " + tasks.size());
 
                     String status = "todo"; // Default status
+                    System.out.println(selectedPriority);
                     //format date as string
                     String dueDate = new SimpleDateFormat("yyyy-MM-dd").format(selecedDate);
-                    Task task = new Task(taskDescription, status, selectedPriority, dueDate);
-                    tasks.add(task);
-                    System.out.println("Number of tasks after adding / before saving  new task: " + tasks.size());
-                    saveTasks();
-                    System.out.println("after saving  new task: " + tasks.size());
+                    Task task = new Task(TaskManagerGUI.username, taskDescription, status, selectedPriority, dueDate);
+                    TaskDAO.addTask(task);
+                    try {
+                        loadTasks(username);
+                    } catch (SQLException ex) {
+                        throw new RuntimeException(ex);
+                    }
 
-                    displayTasks();
+
                 }
             } else {
                 System.out.println("Task addition canceled.");
@@ -138,8 +141,6 @@ public class TaskManagerGUI extends JFrame {
         updateButton.addActionListener(e -> {
             String taskId = JOptionPane.showInputDialog(TaskManagerGUI.this, "Enter task ID to update:");
             if (taskId != null && !(taskId = taskId.trim()).isEmpty()) {
-                Task taskToUpdate = findTaskById(taskId);
-                if (taskToUpdate != null) {
                     String[] options = {"In Progress", "Done"};
                     int newStatus = JOptionPane.showOptionDialog(
                             TaskManagerGUI.this,
@@ -154,28 +155,30 @@ public class TaskManagerGUI extends JFrame {
 
                         if (newStatus>= 0) {
                             String selectedStatus = options[newStatus];
-                            taskToUpdate.setStatus(selectedStatus);
-                            saveTasks();
-                            displayTasks();  // Refresh task display
+                            TaskDAO.updateTask(selectedStatus, taskId);
+                            try {
+                                loadTasks(username);
+                            } catch (SQLException ex) {
+                                throw new RuntimeException(ex);
+                            }
                         }
                     } else {
                         JOptionPane.showMessageDialog(this, "Task not found.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
-                }
         });
 
         deleteButton.addActionListener(e -> {
             String taskId = JOptionPane.showInputDialog(this, "Enter task ID to delete:");
             if (taskId != null && !taskId.trim().isEmpty()) {
-                Task taskToDelete = findTaskById(taskId);
-                if (taskToDelete != null) {
-                    tasks.remove(taskToDelete);
-                    saveTasks();
-                    displayTasks();  // Refresh task display
-                } else {
+                    TaskDAO.deleteTask(taskId);
+                try {
+                    loadTasks(username);
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
+                }
+            } else {
                     JOptionPane.showMessageDialog(this, "Task not found.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
-            }
         });
 
         revalidate();
@@ -190,30 +193,6 @@ public class TaskManagerGUI extends JFrame {
 
 
 
-
-    public void saveTasks() {
-        String tasksFileName = TaskManagerApp.getTasksFileName(username);
-
-        try (PrintWriter writer = new PrintWriter(new FileWriter(tasksFileName))) {
-            writer.println("[");
-            for (int i = 0; i < tasks.size(); i++) {
-                Task task = tasks.get(i);
-                String taskJson = String.format("{\"id\":\"%s\",\"description\":\"%s\",\"status\":\"%s\",\"createdAt\":\"%s\",\"updatedAt\":\"%s\",\"priority\":\"%s\",\"dueDate\":\"%s\"}",
-                        task.getId(), task.getDescription(), task.getStatus(), task.getCreatedAt(), task.getUpdatedAt(), task.getPriority(), task.getDueDate()
-                );
-                writer.print(taskJson);
-                if (i < tasks.size() - 1) {
-                    writer.write(",");
-                }
-            }
-            writer.println("]");
-        } catch (IOException e) {
-            System.out.println("Error writing tasks.json" + e.getMessage());
-        }
-    }
-
-
-
     // Method to display tasks in the text area
     private void styleButton(JButton button) {
         button.setFocusPainted(false);
@@ -224,13 +203,16 @@ public class TaskManagerGUI extends JFrame {
     }
 
     public void displayTasks() {
-        StringBuilder taskText = new StringBuilder();
+        taskDisplayArea.setText("");
         for (Task task : tasks) {
-            taskText.append(task.toString()).append("\n");
+            taskDisplayArea.append(task.toString() + "\n");
         }
-        taskDisplayArea.setText(taskText.toString());
     }
 
+    public void loadTasks(String username) throws SQLException {
+        tasks = TaskDAO.getTasksByUsername(username);
+        displayTasks();
+    }
 
     // Custom Scroll Bar UI Class
     class CustomScrollBarUI extends BasicScrollBarUI {

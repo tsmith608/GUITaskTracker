@@ -1,14 +1,17 @@
 package com.taskmanager;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Map;
 
 public class LoginDialog extends JDialog {
@@ -18,10 +21,15 @@ public class LoginDialog extends JDialog {
     private JButton signUpButton;
     private boolean succeeded;
     private Map<String, String> userMap;
-    private String loggedinInUsername;
+    private static String loggedinInUsername;
 
     public LoginDialog(Frame parent, Map<String, String> userMap) {
         super(parent, "Login", true);
+        try {
+            UIManager.setLookAndFeel(new FlatDarkLaf());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         this.userMap = userMap;
 
         JPanel panel = new JPanel(new GridLayout(3, 2));
@@ -51,21 +59,28 @@ public class LoginDialog extends JDialog {
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if ((authenticate(usernameField.getText().trim(), new String(passwordField.getPassword())))) {
-                    JOptionPane.showMessageDialog(LoginDialog.this, usernameField.getText() + " You have successfully logged in!",
-                            "Login",
-                            JOptionPane.INFORMATION_MESSAGE);
-                    succeeded = true;
-                    dispose();
-                } else {
-                    JOptionPane.showMessageDialog(LoginDialog.this,
-                            "Invalid username or password",
-                            "Login",
-                            JOptionPane.ERROR_MESSAGE);
+                try {
+                    String enteredUsername = usernameField.getText().trim();
+                    String enteredPassword = new String(passwordField.getPassword());
+                    if (authenticate(enteredUsername, enteredPassword)) {
+                        JOptionPane.showMessageDialog(LoginDialog.this, usernameField.getText() + " You have successfully logged in!",
+                                "Login",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        loggedinInUsername = enteredUsername;
+                        succeeded = true;
+                        dispose();
+                    } else {
+                        JOptionPane.showMessageDialog(LoginDialog.this,
+                                "Invalid username or password",
+                                "Login",
+                                JOptionPane.ERROR_MESSAGE);
 
-                    usernameField.setText("");
-                    passwordField.setText("");
-                    succeeded = false;
+                        usernameField.setText("");
+                        passwordField.setText("");
+                        succeeded = false;
+                    }
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
                 }
             }
         });
@@ -79,44 +94,60 @@ public class LoginDialog extends JDialog {
         });
     }
 
-    private boolean authenticate(String username, String password) {
-        String storedHash = userMap.get(username);
-        if (storedHash != null && storedHash.equals(hashPassword(password))) {
-            loggedinInUsername = username;
+    private boolean authenticate(String username, String password) throws SQLException {
+        String sql = "SELECT * FROM users WHERE username = ?";
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                String storedHash = rs.getString("password");
+                String enteredHash = hashPassword(password);
+                if (storedHash.equals(enteredHash)) {
+                    System.out.println("User authenticated");
+                    return true;
+                } else {
+                    System.out.println("Wrong password");
+                    return false;
+                }
+            } else {
+                System.out.println("User not found");
+                return false;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error while authenticating");
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private boolean signUp(String username, String password) {
+        String sql = "INSERT INTO users VALUES (?, ?)";
+        try (Connection conn = DatabaseManager.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, username);
+                ps.setString(2, hashPassword(password));
+                ps.executeUpdate();
+            System.out.println("User Registered Successfully");
             return true;
+        } catch (SQLException e) {
+            if (e.getMessage().contains("UNIQUE constraint failed")) {
+                System.out.println("User already exists");
+            } else {
+                System.out.println("error occurred during sign-up");
+                e.printStackTrace();
+            } return false;
         }
-        return false;
-    }
-    public String getLoggedInUsername() {
-        return loggedinInUsername;
-    }
-
-    private void signUp(String username, String password) {
-        if (username.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(LoginDialog.this,
-                    "Username and password cannot be empty",
-                            "Sign up",
-                            JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        if (userMap.containsKey(username)) {
-            JOptionPane.showMessageDialog(LoginDialog.this,
-                    "Username already exists",
-                            "Sign up",
-                            JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        userMap.put(username, hashPassword(password));
-        UserDataManager.saveUserMap(userMap);
-        JOptionPane.showMessageDialog(LoginDialog.this,
-                        "Account created!",
-                                "Sign up",
-                                    JOptionPane.INFORMATION_MESSAGE);
-
     }
 
     public boolean isSucceeded(){
         return succeeded;
+    }
+
+    public static String getLoggedInUsername() {
+        return loggedinInUsername;
     }
 
     private static String hashPassword(String password) {
@@ -132,5 +163,6 @@ public class LoginDialog extends JDialog {
             throw new RuntimeException(e);
         }
     }
+
 
 }

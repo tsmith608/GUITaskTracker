@@ -4,10 +4,14 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+
 
 public class UserDataManager {
     private static final String USERS_FILE_NAME = "users.txt"; // or "users.json"
@@ -93,5 +97,6 @@ public class UserDataManager {
             System.out.println("Error writing to " + USERS_FILE_NAME + ": " + e.getMessage());
         }
     }
+
 
 }

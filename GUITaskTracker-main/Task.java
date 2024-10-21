@@ -11,10 +11,12 @@ public class Task {
     private String updatedAt;
     private String priority;
     private String dueDate;
+    private String username;
 
     // Constructor to initialize a new task
-    public Task(String description, String status, String priority, String dueDate) {
+    public Task(String username, String description, String status, String priority, String dueDate) {
         this.id = generateUniqueId();
+        this.username = getUsername();
         this.description = description;
         this.status = status;
         this.createdAt = getCurrentTime();
@@ -29,6 +31,16 @@ public class Task {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.priority = priority;
+        this.dueDate = dueDate;
+    }
+    public Task(String id, String username, String description, String status, String priority, String updatedAt, String createdAt, String dueDate) {
+        this.id = id;
+        this.username = username;
+        this.description = description;
+        this.status = status;
+        this.priority = priority;
+        this.updatedAt = updatedAt;
+        this.createdAt = createdAt;
         this.dueDate = dueDate;
     }
 
@@ -95,8 +107,8 @@ public class Task {
 
     @Override
     public String toString() {
-        return String.format("Task id: %s, description: '%s', status: '%s', created: %s, updated: %s, priority: '%s', dueDate: '%s'",
-                id, description, status, createdAt, updatedAt, priority, dueDate);
+        return String.format("Task id: %s, description: '%s', status: '%s', priority: %s, dueDate: '%s'",
+                id, description, status, priority, dueDate);
     }
 
     public String getDueDate() {
@@ -105,5 +117,13 @@ public class Task {
 
     public void setDueDate(String dueDate) {
         this.dueDate = dueDate;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 }
