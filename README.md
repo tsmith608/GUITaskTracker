@@ -9,3 +9,8 @@ Function:
 * You can create and log-in to multiple accounts. 
 * Create tasks that have labels for priority, status, and due date. With metadata such as time created stored in the database. 
 * update and delete tasks. :smile:
+
+Setup:
+*Download java files and the libraries provided
+*Run TaskManagerApp.java
+*Enjoy!
