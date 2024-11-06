@@ -11,6 +11,6 @@ Function:
 * update and delete tasks. :smile:
 
 Setup:
-*Download java files and the libraries provided
-*Run TaskManagerApp.java
+*Download java files and the libraries provided.
+*Run TaskManagerApp.java.
 *Enjoy!
